@@ -1,0 +1,386 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ECOSYN 投资回报计算器</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #0D7E9C;
+            --secondary-color: #01847E;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .gradient-bg {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+        
+        .slider-track {
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        }
+        
+        .floating-particle {
+            position: absolute;
+            width: 4px;
+            height: 4px;
+            background: var(--primary-color);
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        
+        .step-indicator {
+            transition: all 0.3s ease;
+        }
+        
+        .step-indicator.active {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+        
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 20px 40px rgba(13, 126, 156, 0.2);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gradient-to-br from-gray-50 to-white">
+    <!-- Background Effects -->
+    <div class="fixed inset-0 overflow-hidden pointer-events-none">
+        <div class="absolute top-20 left-20 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-20 right-20 w-96 h-96 bg-teal-500/10 rounded-full blur-3xl"></div>
+        <div class="floating-particle" style="top: 10%; left: 20%; animation-delay: 0s;"></div>
+        <div class="floating-particle" style="top: 30%; left: 80%; animation-delay: 1s;"></div>
+        <div class="floating-particle" style="top: 60%; left: 10%; animation-delay: 2s;"></div>
+        <div class="floating-particle" style="top: 80%; left: 60%; animation-delay: 3s;"></div>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="relative z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="text-2xl font-bold gradient-bg bg-clip-text text-transparent">HILLSEA</div>
+                <button class="text-gray-600 hover:text-gray-900">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="relative z-10 max-w-4xl mx-auto px-4 py-8">
+        <!-- Step Indicator -->
+        <div class="flex justify-center mb-12">
+            <div class="flex items-center space-x-4">
+                <div class="step-indicator active w-10 h-10 rounded-full flex items-center justify-center font-semibold">1</div>
+                <div class="w-16 h-1 bg-gray-300"></div>
+                <div class="step-indicator w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center font-semibold text-gray-600">2</div>
+                <div class="w-16 h-1 bg-gray-300"></div>
+                <div class="step-indicator w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center font-semibold text-gray-600">3</div>
+            </div>
+        </div>
+
+        <!-- Step 1: Basic Parameters -->
+        <div id="step1" class="glass-effect rounded-3xl p-8 shadow-2xl">
+            <div class="text-center mb-8">
+                <h1 class="text-3xl font-bold text-gray-900 mb-2">投资回报计算器</h1>
+                <p class="text-gray-600">请输入您的基本运营参数，我们将为您计算ECOSYN的投资回报</p>
+            </div>
+
+            <div class="space-y-8">
+                <!-- Annual Mileage -->
+                <div class="space-y-3">
+                    <label class="flex items-center justify-between text-lg font-semibold text-gray-800">
+                        <span><i class="fas fa-road mr-2 text-blue-600"></i>年行驶里程</span>
+                        <span class="text-2xl gradient-bg bg-clip-text text-transparent">100,000 km</span>
+                    </label>
+                    <input type="range" min="50000" max="300000" value="100000" step="10000" 
+                           class="w-full h-3 rounded-lg slider-track appearance-none cursor-pointer">
+                    <div class="flex justify-between text-sm text-gray-500">
+                        <span>50,000 km</span>
+                        <span>300,000 km</span>
+                    </div>
+                </div>
+
+                <!-- Fuel Consumption -->
+                <div class="space-y-3">
+                    <label class="flex items-center justify-between text-lg font-semibold text-gray-800">
+                        <span><i class="fas fa-gas-pump mr-2 text-blue-600"></i>百公里油耗</span>
+                        <span class="text-2xl gradient-bg bg-clip-text text-transparent">60 L/100km</span>
+                    </label>
+                    <input type="range" min="30" max="150" value="60" step="5" 
+                           class="w-full h-3 rounded-lg slider-track appearance-none cursor-pointer">
+                    <div class="flex justify-between text-sm text-gray-500">
+                        <span>30 L/100km</span>
+                        <span>150 L/100km</span>
+                    </div>
+                </div>
+
+                <!-- Vehicle Count -->
+                <div class="space-y-3">
+                    <label class="text-lg font-semibold text-gray-800">
+                        <i class="fas fa-truck mr-2 text-blue-600"></i>车辆数量
+                    </label>
+                    <input type="number" value="1" min="1" max="100" 
+                           class="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none">
+                </div>
+
+                <!-- Location -->
+                <div class="space-y-3">
+                    <label class="text-lg font-semibold text-gray-800">
+                        <i class="fas fa-map-marker-alt mr-2 text-blue-600"></i>运行所在地
+                    </label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <select class="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none">
+                            <option>中国</option>
+                            <option>美国</option>
+                            <option>澳大利亚</option>
+                            <option>加拿大</option>
+                        </select>
+                        <select class="px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none">
+                            <option>北京市</option>
+                            <option>上海市</option>
+                            <option>广东省</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Fuel Price -->
+                <div class="space-y-3">
+                    <label class="flex items-center justify-between text-lg font-semibold text-gray-800">
+                        <span><i class="fas fa-yen-sign mr-2 text-blue-600"></i>柴油价格</span>
+                        <span class="text-2xl gradient-bg bg-clip-text text-transparent">7.5 元/L</span>
+                    </label>
+                    <input type="range" min="5" max="12.5" value="7.5" step="0.1" 
+                           class="w-full h-3 rounded-lg slider-track appearance-none cursor-pointer">
+                    <div class="flex justify-between text-sm text-gray-500">
+                        <span>5.0 元/L</span>
+                        <span>12.5 元/L</span>
+                    </div>
+                </div>
+
+                <!-- Electricity Price -->
+                <div class="space-y-3">
+                    <label class="flex items-center justify-between text-lg font-semibold text-gray-800">
+                        <span><i class="fas fa-bolt mr-2 text-blue-600"></i>平均电价</span>
+                        <span class="text-2xl gradient-bg bg-clip-text text-transparent">0.65 元/kWh</span>
+                    </label>
+                    <input type="range" min="0" max="1.4" value="0.65" step="0.05" 
+                           class="w-full h-3 rounded-lg slider-track appearance-none cursor-pointer">
+                    <div class="flex justify-between text-sm text-gray-500">
+                        <span>0.0 元/kWh</span>
+                        <span>1.4 元/kWh</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-center mt-12">
+                <button class="px-8 py-4 gradient-bg text-white rounded-xl font-semibold text-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    下一步 <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 2: Product Selection (Hidden by default) -->
+        <div id="step2" class="glass-effect rounded-3xl p-8 shadow-2xl hidden">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">选择ECOSYN产品</h2>
+                <p class="text-gray-600">基于您的运营参数，我们为您推荐以下产品</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <!-- EcoSyn One -->
+                <div class="card-hover glass-effect rounded-2xl p-6 border-2 border-gray-200">
+                    <div class="text-center mb-4">
+                        <h3 class="text-xl font-bold text-gray-900">EcoSyn One</h3>
+                        <p class="text-sm text-gray-600">较低工作强度场景</p>
+                    </div>
+                    <div class="text-center mb-4">
+                        <div class="text-2xl font-bold gradient-bg bg-clip-text text-transparent">141万元</div>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-700">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>双电驱桥</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>800 kWh</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>80,000 Nm扭矩</li>
+                    </ul>
+                </div>
+
+                <!-- EcoSyn Pro (Recommended) -->
+                <div class="card-hover glass-effect rounded-2xl p-6 border-2 border-blue-500 relative">
+                    <div class="absolute -top-3 left-1/2 transform -translate-x-1/2">
+                        <span class="bg-gradient-to-r from-blue-600 to-teal-600 text-white px-4 py-1 rounded-full text-sm font-semibold">
+                            <i class="fas fa-star mr-1"></i>推荐
+                        </span>
+                    </div>
+                    <div class="text-center mb-4">
+                        <h3 class="text-xl font-bold text-gray-900">EcoSyn Pro</h3>
+                        <p class="text-sm text-gray-600">一般工作强度场景</p>
+                    </div>
+                    <div class="text-center mb-4">
+                        <div class="text-2xl font-bold gradient-bg bg-clip-text text-transparent">234万元</div>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-700">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>双电驱桥</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>1600 kWh</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>80,000 Nm扭矩</li>
+                    </ul>
+                </div>
+
+                <!-- EcoSyn Max -->
+                <div class="card-hover glass-effect rounded-2xl p-6 border-2 border-gray-200">
+                    <div class="text-center mb-4">
+                        <h3 class="text-xl font-bold text-gray-900">EcoSyn Max</h3>
+                        <p class="text-sm text-gray-600">高工作强度场景</p>
+                    </div>
+                    <div class="text-center mb-4">
+                        <div class="text-2xl font-bold gradient-bg bg-clip-text text-transparent">334万元</div>
+                    </div>
+                    <ul class="space-y-2 text-sm text-gray-700">
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>三电驱桥</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>2400 kWh</li>
+                        <li><i class="fas fa-check text-green-500 mr-2"></i>120,000 Nm扭矩</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Cooperation Method -->
+            <div class="mb-8">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">合作方式</h3>
+                <div class="grid grid-cols-2 gap-4">
+                    <label class="glass-effect rounded-xl p-4 border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-colors">
+                        <input type="radio" name="cooperation" value="purchase" class="mr-3">
+                        <span class="font-semibold">我要购买ECOSYN</span>
+                    </label>
+                    <label class="glass-effect rounded-xl p-4 border-2 border-gray-200 cursor-pointer hover:border-blue-500 transition-colors">
+                        <input type="radio" name="cooperation" value="lease" class="mr-3">
+                        <span class="font-semibold">我要租赁ECOSYN</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="flex justify-between">
+                <button class="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:bg-gray-50 transition-colors">
+                    <i class="fas fa-arrow-left mr-2"></i>上一步
+                </button>
+                <button class="px-8 py-4 gradient-bg text-white rounded-xl font-semibold text-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    获取定制方案 <i class="fas fa-arrow-right ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Step 3: Results (Hidden by default) -->
+        <div id="step3" class="glass-effect rounded-3xl p-8 shadow-2xl hidden">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold text-gray-900 mb-2">投资回报分析结果</h2>
+                <p class="text-gray-600">基于您选择的EcoSyn Pro和购买方式</p>
+            </div>
+
+            <!-- Results Summary -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <div class="glass-effect rounded-2xl p-6 text-center">
+                    <div class="text-4xl font-bold gradient-bg bg-clip-text text-transparent mb-2">¥2,880,000</div>
+                    <div class="text-gray-600">年节省总成本</div>
+                </div>
+                <div class="glass-effect rounded-2xl p-6 text-center">
+                    <div class="text-4xl font-bold gradient-bg bg-clip-text text-transparent mb-2">0.81年</div>
+                    <div class="text-gray-600">投资回收期</div>
+                </div>
+                <div class="glass-effect rounded-2xl p-6 text-center">
+                    <div class="text-4xl font-bold gradient-bg bg-clip-text text-transparent mb-2">¥4,680,000</div>
+                    <div class="text-gray-600">总投资</div>
+                </div>
+                <div class="glass-effect rounded-2xl p-6 text-center">
+                    <div class="text-4xl font-bold gradient-bg bg-clip-text text-transparent mb-2">160.32吨</div>
+                    <div class="text-gray-600">年CO₂减排量</div>
+                </div>
+            </div>
+
+            <!-- Detailed Breakdown -->
+            <div class="glass-effect rounded-2xl p-6 mb-8">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">详细计算</h3>
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">年燃油总成本：</span>
+                        <span class="font-semibold">¥4,500,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">年充电总成本：</span>
+                        <span class="font-semibold">¥720,000</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">年节省总成本：</span>
+                        <span class="font-semibold text-green-600">¥2,880,000</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center">
+                <button class="px-8 py-4 gradient-bg text-white rounded-xl font-semibold text-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                    获取完整规格书及定制化财务分析 <i class="fas fa-envelope ml-2"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Disclaimer -->
+        <div class="text-center mt-8 text-sm text-gray-500">
+            该测算采用特定工况数据模拟，难以避免实际场景不同、设备配置不同对测算结果带来的影响，不作为商务或最终报价依据，仅作为参考。
+        </div>
+    </main>
+
+    <script>
+        // Step navigation
+        let currentStep = 1;
+        
+        function showStep(step) {
+            document.querySelectorAll('[id^="step"]').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`step${step}`).classList.remove('hidden');
+            
+            document.querySelectorAll('.step-indicator').forEach((el, index) => {
+                if (index < step) {
+                    el.classList.add('active');
+                    el.classList.remove('bg-gray-300', 'text-gray-600');
+                } else {
+                    el.classList.remove('active');
+                    el.classList.add('bg-gray-300', 'text-gray-600');
+                }
+            });
+        }
+        
+        // Slider value updates
+        document.querySelectorAll('input[type="range"]').forEach(slider => {
+            slider.addEventListener('input', function() {
+                const label = this.previousElementSibling;
+                const valueSpan = label.querySelector('span:last-child');
+                if (valueSpan) {
+                    let value = this.value;
+                    if (this.min >= 1000) {
+                        value = parseInt(value).toLocaleString();
+                    }
+                    valueSpan.textContent = value + (this.id.includes('mileage') ? ' km' : 
+                                                   this.id.includes('fuel') ? ' L/100km' : 
+                                                   this.id.includes('diesel') ? ' 元/L' : 
+                                                   this.id.includes('electricity') ? ' 元/kWh' : '');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
+    

@@ -1,0 +1,104 @@
+
+  {
+    "name": "roi_calculation_history",
+    "title": "投资回报计算历史记录",
+    "schemas": [
+      {
+        "name": "annual_mileage",
+        "title": "年行驶里程",
+        "type": "Number"
+      },
+      {
+        "name": "fuel_consumption",
+        "title": "百公里油耗",
+        "type": "Number"
+      },
+      {
+        "name": "vehicle_count",
+        "title": "车辆数量",
+        "type": "Number"
+      },
+      {
+        "name": "country",
+        "title": "运行国家",
+        "type": "String"
+      },
+      {
+        "name": "region",
+        "title": "运行地区",
+        "type": "String"
+      },
+      {
+        "name": "diesel_price",
+        "title": "柴油价格",
+        "type": "Number"
+      },
+      {
+        "name": "electricity_price",
+        "title": "平均电价",
+        "type": "Number"
+      },
+      {
+        "name": "selected_product",
+        "title": "选择的ECOSYN型号",
+        "type": "String"
+      },
+      {
+        "name": "cooperation_type",
+        "title": "合作方式",
+        "type": "String"
+      },
+      {
+        "name": "annual_fuel_cost",
+        "title": "年燃油成本",
+        "type": "Number"
+      },
+      {
+        "name": "annual_electricity_cost",
+        "title": "年电力成本",
+        "type": "Number"
+      },
+      {
+        "name": "annual_savings",
+        "title": "年节省成本",
+        "type": "Number"
+      },
+      {
+        "name": "co2_reduction",
+        "title": "CO₂减排量",
+        "type": "Number"
+      },
+      {
+        "name": "total_investment",
+        "title": "总投资",
+        "type": "Number"
+      },
+      {
+        "name": "payback_period",
+        "title": "投资回收期",
+        "type": "Number"
+      },
+      {
+        "name": "min_savings",
+        "title": "最小节省成本",
+        "type": "Number"
+      },
+      {
+        "name": "max_savings",
+        "title": "最大节省成本",
+        "type": "Number"
+      },
+      {
+        "name": "currency",
+        "title": "货币单位",
+        "type": "String"
+      },
+      {
+        "name": "calculation_time",
+        "title": "计算时间",
+        "type": "DateTime",
+        "format": "timestamp-ms"
+      }
+    ]
+  }
+  
