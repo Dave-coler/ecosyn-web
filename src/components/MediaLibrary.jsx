@@ -1,4 +1,3 @@
-
 // @ts-ignore;
 import React, { useState, useEffect } from 'react';
 // @ts-ignore;
@@ -11,7 +10,6 @@ import { MediaGrid } from '@/components/MediaGrid';
 import { MediaTable } from '@/components/MediaTable';
 import { MediaFilters } from '@/components/MediaFilters';
 import { MediaEditDialog } from '@/components/MediaEditDialog';
-
 export function MediaLibrary({
   searchQuery,
   filterType
@@ -108,17 +106,15 @@ export function MediaLibrary({
       }
 
       // 列出HILLSEA-web文件夹下的文件
-      const result = await tcb.storage.get fileList({
+      const result = await tcb.storage.getFileList({
         prefix: 'HILLSEA-web/'
       });
-
       if (result.fileList && result.fileList.length > 0) {
         // 获取文件下载链接
         const fileIDs = result.fileList.map(file => file.fileID);
         const urlResult = await tcb.getTempFileURL({
           fileList: fileIDs
         });
-
         const mediaData = result.fileList.map((file, index) => ({
           id: file.fileID,
           name: file.name.replace('HILLSEA-web/', ''),
@@ -135,7 +131,6 @@ export function MediaLibrary({
           category: 'background',
           tags: []
         }));
-
         setMediaItems(mediaData);
         updateCategoryAndTagCounts(mediaData);
       }
@@ -147,7 +142,6 @@ export function MediaLibrary({
       setLoading(false);
     }
   };
-
   const loadMockData = () => {
     const mockData = [{
       id: '1',
@@ -237,7 +231,6 @@ export function MediaLibrary({
   useEffect(() => {
     loadFromCloudStorage();
   }, []);
-
   const updateCategoryAndTagCounts = items => {
     // 更新分类计数
     const updatedCategories = categories.map(cat => ({
@@ -253,7 +246,6 @@ export function MediaLibrary({
     }));
     setTags(updatedTags);
   };
-
   const filteredItems = mediaItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || item.description.toLowerCase().includes(searchQuery.toLowerCase()) || item.tags && item.tags.some(tagId => {
       const tag = tags.find(t => t.id === tagId);
@@ -264,7 +256,6 @@ export function MediaLibrary({
     const matchesTags = selectedTags.length === 0 || item.tags && selectedTags.some(tagId => item.tags.includes(tagId));
     return matchesSearch && matchesFilter && matchesCategory && matchesTags;
   });
-
   const handleUpload = files => {
     const newItems = files.map((file, index) => {
       // 智能分类
@@ -312,10 +303,8 @@ export function MediaLibrary({
       description: `成功上传 ${files.length} 个文件到云存储HILLSEA-web文件夹`
     });
   };
-
   const handleDelete = async () => {
     if (!selectedItem) return;
-    
     try {
       // 从云存储删除文件
       if (selectedItem.fileID) {
@@ -346,7 +335,6 @@ export function MediaLibrary({
       });
     }
   };
-
   const handleBatchDelete = async () => {
     try {
       const tcb = await window.$w?.cloud?.getCloudInstance();
@@ -354,13 +342,11 @@ export function MediaLibrary({
         const item = mediaItems.find(i => i.id === itemId);
         return item?.fileID;
       }).filter(Boolean);
-
       if (tcb && fileIDs.length > 0) {
         await tcb.deleteFile({
           fileList: fileIDs
         });
       }
-
       const updatedItems = mediaItems.filter(item => !selectedItems.has(item.id));
       setMediaItems(updatedItems);
       updateCategoryAndTagCounts(updatedItems);
@@ -379,7 +365,6 @@ export function MediaLibrary({
       });
     }
   };
-
   const handleEdit = updatedItem => {
     const updatedItems = mediaItems.map(item => item.id === updatedItem.id ? updatedItem : item);
     setMediaItems(updatedItems);
@@ -391,7 +376,6 @@ export function MediaLibrary({
       description: '文件信息已更新'
     });
   };
-
   const copyToClipboard = text => {
     navigator.clipboard.writeText(text).then(() => {
       setCopiedUrl(true);
@@ -402,7 +386,6 @@ export function MediaLibrary({
       });
     });
   };
-
   const handleBatchSelect = (itemId, selected) => {
     const newSelected = new Set(selectedItems);
     if (selected) {
@@ -412,7 +395,6 @@ export function MediaLibrary({
     }
     setSelectedItems(newSelected);
   };
-
   const handleSelectAll = () => {
     if (selectedItems.size === filteredItems.length) {
       setSelectedItems(new Set());
@@ -420,7 +402,6 @@ export function MediaLibrary({
       setSelectedItems(new Set(filteredItems.map(item => item.id)));
     }
   };
-
   const handleBatchAction = action => {
     if (selectedItems.size === 0) {
       toast({
@@ -433,7 +414,6 @@ export function MediaLibrary({
     setBatchAction(action);
     setBatchDialogOpen(true);
   };
-
   const handleBatchMove = categoryId => {
     const updatedItems = mediaItems.map(item => selectedItems.has(item.id) ? {
       ...item,
@@ -448,7 +428,6 @@ export function MediaLibrary({
       description: `已移动 ${selectedItems.size} 个文件到 ${categories.find(c => c.id === categoryId)?.name}`
     });
   };
-
   const handleBatchAddTags = tagIds => {
     const updatedItems = mediaItems.map(item => selectedItems.has(item.id) ? {
       ...item,
@@ -463,7 +442,6 @@ export function MediaLibrary({
       description: `已为 ${selectedItems.size} 个文件添加标签`
     });
   };
-
   const addCategory = () => {
     if (!newCategoryName.trim()) return;
     const newCategory = {
@@ -480,7 +458,6 @@ export function MediaLibrary({
       description: `已创建分类: ${newCategoryName}`
     });
   };
-
   const addTag = () => {
     if (!newTagName.trim()) return;
     const newTag = {
@@ -496,7 +473,6 @@ export function MediaLibrary({
       description: `已创建标签: ${newTagName}`
     });
   };
-
   const formatFileSize = bytes => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -504,11 +480,9 @@ export function MediaLibrary({
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
-
   const formatDate = dateString => {
     return new Date(dateString).toLocaleDateString('zh-CN');
   };
-
   return <div className="space-y-6">
       {/* 操作栏 */}
       <div className="flex items-center justify-between">
@@ -575,17 +549,7 @@ export function MediaLibrary({
       </Card>
 
       {/* 分类和标签筛选 */}
-      <MediaFilters
-        categories={categories}
-        tags={tags}
-        selectedCategory={selectedCategory}
-        selectedTags={selectedTags}
-        totalItems={mediaItems.length}
-        onCategoryChange={setSelectedCategory}
-        onTagChange={setSelectedTags}
-        onCategoryDialogOpen={() => setCategoryDialogOpen(true)}
-        onTagDialogOpen={() => setTagDialogOpen(true)}
-      />
+      <MediaFilters categories={categories} tags={tags} selectedCategory={selectedCategory} selectedTags={selectedTags} totalItems={mediaItems.length} onCategoryChange={setSelectedCategory} onTagChange={setSelectedTags} onCategoryDialogOpen={() => setCategoryDialogOpen(true)} onTagDialogOpen={() => setTagDialogOpen(true)} />
 
       {/* 批量操作工具栏 */}
       {batchMode && selectedItems.size > 0 && <Card className="border-blue-200 bg-blue-50">
@@ -667,57 +631,24 @@ export function MediaLibrary({
       {loading ? <div className="flex items-center justify-center py-12">
           <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mr-3" />
           <span className="text-lg text-gray-600">正在从云存储加载文件...</span>
-        </div> : viewMode === 'grid' ? <MediaGrid
-        items={filteredItems}
-        selectedItems={selectedItems}
-        batchMode={batchMode}
-        categories={categories}
-        tags={tags}
-        onBatchSelect={handleBatchSelect}
-        onSelectItem={setSelectedItem}
-        onCopyUrl={copyToClipboard}
-        onEdit={item => {
-          setSelectedItem(item);
-          setEditDialogOpen(true);
-        }}
-        onDelete={item => {
-          setSelectedItem(item);
-          setDeleteDialogOpen(true);
-        }}
-        copiedUrl={copiedUrl}
-      /> : <Card>
-          <MediaTable
-            items={filteredItems}
-            selectedItems={selectedItems}
-            batchMode={batchMode}
-            categories={categories}
-            tags={tags}
-            onBatchSelect={handleBatchSelect}
-            onSelectItem={setSelectedItem}
-            onCopyUrl={copyToClipboard}
-            onEdit={item => {
-              setSelectedItem(item);
-              setEditDialogOpen(true);
-            }}
-            onDelete={item => {
-              setSelectedItem(item);
-              setDeleteDialogOpen(true);
-            }}
-            copiedUrl={copiedUrl}
-          />
+        </div> : viewMode === 'grid' ? <MediaGrid items={filteredItems} selectedItems={selectedItems} batchMode={batchMode} categories={categories} tags={tags} onBatchSelect={handleBatchSelect} onSelectItem={setSelectedItem} onCopyUrl={copyToClipboard} onEdit={item => {
+      setSelectedItem(item);
+      setEditDialogOpen(true);
+    }} onDelete={item => {
+      setSelectedItem(item);
+      setDeleteDialogOpen(true);
+    }} copiedUrl={copiedUrl} /> : <Card>
+          <MediaTable items={filteredItems} selectedItems={selectedItems} batchMode={batchMode} categories={categories} tags={tags} onBatchSelect={handleBatchSelect} onSelectItem={setSelectedItem} onCopyUrl={copyToClipboard} onEdit={item => {
+        setSelectedItem(item);
+        setEditDialogOpen(true);
+      }} onDelete={item => {
+        setSelectedItem(item);
+        setDeleteDialogOpen(true);
+      }} copiedUrl={copiedUrl} />
         </Card>}
 
       {/* 编辑对话框 */}
-      <MediaEditDialog
-        open={editDialogOpen}
-        onOpenChange={setEditDialogOpen}
-        item={selectedItem}
-        categories={categories}
-        tags={tags}
-        onSave={handleEdit}
-        copiedUrl={copiedUrl}
-        onCopyUrl={copyToClipboard}
-      />
+      <MediaEditDialog open={editDialogOpen} onOpenChange={setEditDialogOpen} item={selectedItem} categories={categories} tags={tags} onSave={handleEdit} copiedUrl={copiedUrl} onCopyUrl={copyToClipboard} />
 
       {/* 批量操作对话框 */}
       <Dialog open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
