@@ -3,7 +3,7 @@ import React, { useState, useCallback, useRef } from 'react';
 // @ts-ignore;
 import { useToast, Button, Slider, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tabs, TabsContent, TabsList, TabsTrigger, Card, CardContent, CardHeader, CardTitle } from '@/components/ui';
 // @ts-ignore;
-import { Upload, X, FileText, Image, Video, Crop, RotateCw, Download, Copy, Check, Scissors, Zap, Eye, EyeOff, Settings, RefreshCw, Edit } from 'lucide-react';
+import { Upload, X, FileText, Image, Video, Crop, RotateCw, Download, Copy, Check, Scissors, Zap, Eye, EyeOff, Settings, RefreshCw, Edit, Cloud, Folder, HardDrive } from 'lucide-react';
 
 export function MediaUpload({
   onUpload
@@ -15,6 +15,8 @@ export function MediaUpload({
   const [files, setFiles] = useState([]);
   const [editingFile, setEditingFile] = useState(null);
   const [editMode, setEditMode] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
   const fileInputRef = useRef(null);
   const canvasRef = useRef(null);
 
@@ -34,6 +36,38 @@ export function MediaUpload({
   });
   const [previewMode, setPreviewMode] = useState('original');
   const [copiedUrl, setCopiedUrl] = useState(false);
+
+  // 云存储相关函数
+  const uploadToCloudStorage = async (file, fileName) => {
+    try {
+      // 获取云开发实例
+      const tcb = await window.$w?.cloud?.getCloudInstance();
+      if (!tcb) {
+        throw new Error('云开发实例未初始化');
+      }
+
+      // 上传到云存储
+      const result = await tcb.uploadFile({
+        cloudPath: `HILLSEA-web/${fileName}`,
+        filePath: file
+      });
+
+      // 获取文件下载链接
+      const fileInfo = await tcb.getTempFileURL({
+        fileList: [result.fileID]
+      });
+      if (fileInfo.fileList && fileInfo.fileList.length > 0) {
+        return {
+          fileID: result.fileID,
+          tempFileURL: fileInfo.fileList[0].tempFileURL
+        };
+      }
+      throw new Error('获取文件链接失败');
+    } catch (error) {
+      console.error('云存储上传失败:', error);
+      throw error;
+    }
+  };
   const handleDrag = useCallback(e => {
     e.preventDefault();
     e.stopPropagation();
@@ -176,7 +210,7 @@ export function MediaUpload({
     };
     img.src = URL.createObjectURL(editingFile);
   };
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (files.length === 0) {
       toast({
         title: '请选择文件',
@@ -185,10 +219,73 @@ export function MediaUpload({
       });
       return;
     }
-    onUpload(files);
-    setFiles([]);
-    setEditMode(false);
-    setEditingFile(null);
+    setUploading(true);
+    const uploadedFiles = [];
+    const newProgress = {};
+    try {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileName = `${Date.now()}_${file.name}`;
+
+        // 更新进度
+        newProgress[i] = 0;
+        setUploadProgress({
+          ...newProgress
+        });
+        try {
+          // 上传到云存储
+          const cloudResult = await uploadToCloudStorage(file, fileName);
+
+          // 创建文件信息对象
+          const fileInfo = {
+            id: Date.now() + i,
+            name: file.name,
+            type: file.type.startsWith('image/') ? 'image' : 'video',
+            size: file.size,
+            url: cloudResult.tempFileURL,
+            fileID: cloudResult.fileID,
+            cloudPath: `HILLSEA-web/${fileName}`,
+            section: 'unassigned',
+            uploadedAt: new Date().toISOString(),
+            description: '',
+            format: file.type.split('/')[1]?.toUpperCase() || 'UNKNOWN',
+            optimized: false
+          };
+          uploadedFiles.push(fileInfo);
+          newProgress[i] = 100;
+          setUploadProgress({
+            ...newProgress
+          });
+        } catch (error) {
+          console.error(`文件 ${file.name} 上传失败:`, error);
+          toast({
+            title: '上传失败',
+            description: `${file.name} 上传失败: ${error.message}`,
+            variant: 'destructive'
+          });
+        }
+      }
+      if (uploadedFiles.length > 0) {
+        onUpload(uploadedFiles);
+        toast({
+          title: '上传成功',
+          description: `成功上传 ${uploadedFiles.length} 个文件到云存储`
+        });
+      }
+      setFiles([]);
+      setEditMode(false);
+      setEditingFile(null);
+      setUploadProgress({});
+    } catch (error) {
+      console.error('批量上传失败:', error);
+      toast({
+        title: '上传失败',
+        description: '上传过程中发生错误',
+        variant: 'destructive'
+      });
+    } finally {
+      setUploading(false);
+    }
   };
   const formatFileSize = bytes => {
     if (bytes === 0) return '0 Bytes';
@@ -198,7 +295,7 @@ export function MediaUpload({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
   const getFileUrl = file => {
-    return URL.createObjectURL(file);
+    return file.url || URL.createObjectURL(file);
   };
   const copyToClipboard = text => {
     navigator.clipboard.writeText(text).then(() => {
@@ -268,6 +365,7 @@ export function MediaUpload({
               <div className="mt-2 text-sm text-gray-600">
                 <p>文件大小: {formatFileSize(editingFile.size)}</p>
                 <p>文件类型: {editingFile.type}</p>
+                <p>存储位置: HILLSEA-web/</p>
               </div>
             </div>
 
@@ -285,6 +383,10 @@ export function MediaUpload({
                     </Button>
                   </div>
                   <p className="text-xs text-gray-500">点击复制按钮获取文件地址，可用于网站引用</p>
+                  <div className="flex items-center space-x-2 text-xs text-blue-600">
+                    <Cloud className="w-3 h-3" />
+                    <span>存储在云存储 HILLSEA-web 文件夹</span>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -467,6 +569,10 @@ export function MediaUpload({
             <Copy className="w-3 h-3 mr-1" />
             可复制地址
           </div>
+          <div className="flex items-center">
+            <Cloud className="w-3 h-3 mr-1" />
+            云存储
+          </div>
         </div>
       </div>
 
@@ -481,23 +587,31 @@ export function MediaUpload({
                 </div>
               </div>
               <div className="flex items-center space-x-2">
-                {file.type.startsWith('image/') && <Button variant="ghost" size="sm" onClick={() => handleEdit(file)}>
+                {uploading && uploadProgress[index] !== undefined && <div className="flex items-center space-x-2">
+                    <div className="w-20 bg-gray-200 rounded-full h-2">
+                      <div className="bg-blue-600 h-2 rounded-full transition-all duration-300" style={{
+                width: `${uploadProgress[index]}%`
+              }} />
+                    </div>
+                    <span className="text-xs text-gray-600">{uploadProgress[index]}%</span>
+                  </div>}
+                {file.type.startsWith('image/') && <Button variant="ghost" size="sm" onClick={() => handleEdit(file)} disabled={uploading}>
                     <Edit className="w-4 h-4" />
                   </Button>}
-                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(getFileUrl(file))}>
+                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(getFileUrl(file))} disabled={uploading}>
                   <Copy className="w-4 h-4" />
                 </Button>
-                <Button variant="ghost" size="sm" onClick={() => removeFile(index)}>
+                <Button variant="ghost" size="sm" onClick={() => removeFile(index)} disabled={uploading}>
                   <X className="w-4 h-4" />
                 </Button>
               </div>
             </div>)}
           <div className="flex justify-end space-x-2">
-            <Button variant="outline" onClick={() => setFiles([])}>
+            <Button variant="outline" onClick={() => setFiles([])} disabled={uploading}>
               清空
             </Button>
-            <Button onClick={handleUpload} className="bg-gradient-to-r from-[#0D7E9C] to-[#01847E]">
-              上传 {files.length} 个文件
+            <Button onClick={handleUpload} className="bg-gradient-to-r from-[#0D7E9C] to-[#01847E]" disabled={uploading}>
+              {uploading ? <><HardDrive className="w-4 h-4 mr-2 animate-spin" />上传中...</> : <><Cloud className="w-4 h-4 mr-2" />上传到云存储</>}
             </Button>
           </div>
         </div>}

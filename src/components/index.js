@@ -21,3 +21,7 @@ export * from './MediaUpload.jsx';
 export * from './SectionManager.jsx';
 export * from './PageImageManager.jsx';
 export * from './ImagePreview.jsx';
+export * from './MediaGrid.jsx';
+export * from './MediaTable.jsx';
+export * from './MediaFilters.jsx';
+export * from './MediaEditDialog.jsx';

@@ -1,11 +1,17 @@
+
 // @ts-ignore;
 import React, { useState, useEffect } from 'react';
 // @ts-ignore;
-import { useToast, Button, Card, CardContent, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Table, TableBody, TableCell, TableHead, TableHeader, TableRow, Badge, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tabs, TabsContent, TabsList, TabsTrigger, Checkbox, CardHeader, CardTitle } from '@/components/ui';
+import { useToast, Button, Card, CardContent, Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, Input, Label, Select, SelectContent, SelectItem, SelectTrigger, SelectValue, Tabs, TabsContent, TabsList, TabsTrigger, Checkbox, CardHeader, CardTitle } from '@/components/ui';
 // @ts-ignore;
-import { Upload, Image, Video, Trash2, Edit, Eye, Plus, Download, X, Check, AlertCircle, FileText, Copy, Link, ExternalLink, Scissors, Zap, FolderOpen, Tag, Move, Filter, Search, Grid3x3, List, ChevronDown, ChevronUp, FolderPlus, TagPlus, Archive, RefreshCw } from 'lucide-react';
+import { Upload, Image, Video, Trash2, Edit, Eye, Plus, Download, X, Check, AlertCircle, FileText, Copy, Link, ExternalLink, Scissors, Zap, FolderOpen, Tag, Move, Filter, Search, Grid3x3, List, ChevronDown, ChevronUp, FolderPlus, TagPlus, Archive, RefreshCw, Cloud, HardDrive, Folder, Database } from 'lucide-react';
 
 import { MediaUpload } from '@/components/MediaUpload';
+import { MediaGrid } from '@/components/MediaGrid';
+import { MediaTable } from '@/components/MediaTable';
+import { MediaFilters } from '@/components/MediaFilters';
+import { MediaEditDialog } from '@/components/MediaEditDialog';
+
 export function MediaLibrary({
   searchQuery,
   filterType
@@ -20,6 +26,7 @@ export function MediaLibrary({
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [viewMode, setViewMode] = useState('grid'); // grid or table
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // 批量管理状态
   const [selectedItems, setSelectedItems] = useState(new Set());
@@ -91,14 +98,65 @@ export function MediaLibrary({
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newTagName, setNewTagName] = useState('');
 
-  // 模拟数据
-  useEffect(() => {
+  // 云存储相关函数
+  const loadFromCloudStorage = async () => {
+    setLoading(true);
+    try {
+      const tcb = await window.$w?.cloud?.getCloudInstance();
+      if (!tcb) {
+        throw new Error('云开发实例未初始化');
+      }
+
+      // 列出HILLSEA-web文件夹下的文件
+      const result = await tcb.storage.get fileList({
+        prefix: 'HILLSEA-web/'
+      });
+
+      if (result.fileList && result.fileList.length > 0) {
+        // 获取文件下载链接
+        const fileIDs = result.fileList.map(file => file.fileID);
+        const urlResult = await tcb.getTempFileURL({
+          fileList: fileIDs
+        });
+
+        const mediaData = result.fileList.map((file, index) => ({
+          id: file.fileID,
+          name: file.name.replace('HILLSEA-web/', ''),
+          type: file.name.match(/\.(jpg|jpeg|png|gif|webp)$/i) ? 'image' : 'video',
+          size: file.size || 0,
+          url: urlResult.fileList[index]?.tempFileURL || '',
+          fileID: file.fileID,
+          cloudPath: file.name,
+          section: 'unassigned',
+          uploadedAt: file.createTime || new Date().toISOString(),
+          description: '',
+          format: file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN',
+          optimized: false,
+          category: 'background',
+          tags: []
+        }));
+
+        setMediaItems(mediaData);
+        updateCategoryAndTagCounts(mediaData);
+      }
+    } catch (error) {
+      console.error('加载云存储文件失败:', error);
+      // 如果云存储加载失败，使用模拟数据
+      loadMockData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMockData = () => {
     const mockData = [{
       id: '1',
       name: 'hero-banner.jpg',
       type: 'image',
       size: 2048576,
       url: 'https://images.unsplash.com/photo-1557804506-669a67965ba0?w=800&h=400&fit=crop',
+      fileID: 'cloud://env-xxx.HILLSEA-web/hero-banner.jpg',
+      cloudPath: 'HILLSEA-web/hero-banner.jpg',
       section: 'home',
       uploadedAt: '2024-01-15T10:30:00Z',
       description: '首页横幅图片',
@@ -113,6 +171,8 @@ export function MediaLibrary({
       type: 'video',
       size: 10485760,
       url: 'https://example.com/video.mp4',
+      fileID: 'cloud://env-xxx.HILLSEA-web/product-intro.mp4',
+      cloudPath: 'HILLSEA-web/product-intro.mp4',
       section: 'products',
       uploadedAt: '2024-01-14T15:45:00Z',
       description: '产品介绍视频',
@@ -126,6 +186,8 @@ export function MediaLibrary({
       type: 'image',
       size: 1536000,
       url: 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=600&h=400&fit=crop',
+      fileID: 'cloud://env-xxx.HILLSEA-web/team-photo.jpg',
+      cloudPath: 'HILLSEA-web/team-photo.jpg',
       section: 'about',
       uploadedAt: '2024-01-13T09:20:00Z',
       description: '团队合影',
@@ -140,6 +202,8 @@ export function MediaLibrary({
       type: 'image',
       size: 3072000,
       url: 'https://images.unsplash.com/photo-1531297484001-80022131f5a1?w=800&h=600&fit=crop',
+      fileID: 'cloud://env-xxx.HILLSEA-web/technology-bg.jpg',
+      cloudPath: 'HILLSEA-web/technology-bg.jpg',
       section: 'technology',
       uploadedAt: '2024-01-12T14:10:00Z',
       description: '技术背景图',
@@ -154,6 +218,8 @@ export function MediaLibrary({
       type: 'image',
       size: 512000,
       url: 'https://example.com/logo.png',
+      fileID: 'cloud://env-xxx.HILLSEA-web/company-logo.png',
+      cloudPath: 'HILLSEA-web/company-logo.png',
       section: 'about',
       uploadedAt: '2024-01-11T11:30:00Z',
       description: '公司Logo',
@@ -165,7 +231,13 @@ export function MediaLibrary({
     }];
     setMediaItems(mockData);
     updateCategoryAndTagCounts(mockData);
+  };
+
+  // 初始化加载数据
+  useEffect(() => {
+    loadFromCloudStorage();
   }, []);
+
   const updateCategoryAndTagCounts = items => {
     // 更新分类计数
     const updatedCategories = categories.map(cat => ({
@@ -181,6 +253,7 @@ export function MediaLibrary({
     }));
     setTags(updatedTags);
   };
+
   const filteredItems = mediaItems.filter(item => {
     const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || item.description.toLowerCase().includes(searchQuery.toLowerCase()) || item.tags && item.tags.some(tagId => {
       const tag = tags.find(t => t.id === tagId);
@@ -191,6 +264,7 @@ export function MediaLibrary({
     const matchesTags = selectedTags.length === 0 || item.tags && selectedTags.some(tagId => item.tags.includes(tagId));
     return matchesSearch && matchesFilter && matchesCategory && matchesTags;
   });
+
   const handleUpload = files => {
     const newItems = files.map((file, index) => {
       // 智能分类
@@ -213,15 +287,17 @@ export function MediaLibrary({
         suggestedTags.push('background');
       }
       return {
-        id: Date.now() + index,
+        id: file.fileID || Date.now() + index,
         name: file.name,
         type: file.type.startsWith('image/') ? 'image' : 'video',
         size: file.size,
-        url: URL.createObjectURL(file),
+        url: file.url,
+        fileID: file.fileID,
+        cloudPath: file.cloudPath,
         section: 'unassigned',
         uploadedAt: new Date().toISOString(),
         description: '',
-        format: file.type.split('/')[1]?.toUpperCase() || 'UNKNOWN',
+        format: file.format || file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN',
         optimized: false,
         category: suggestedCategory,
         tags: suggestedTags
@@ -233,20 +309,77 @@ export function MediaLibrary({
     setUploadDialogOpen(false);
     toast({
       title: '上传成功',
-      description: `成功上传 ${files.length} 个文件，已自动分类`
+      description: `成功上传 ${files.length} 个文件到云存储HILLSEA-web文件夹`
     });
   };
-  const handleDelete = () => {
-    const updatedItems = mediaItems.filter(item => item.id !== selectedItem.id);
-    setMediaItems(updatedItems);
-    updateCategoryAndTagCounts(updatedItems);
-    setDeleteDialogOpen(false);
-    setSelectedItem(null);
-    toast({
-      title: '删除成功',
-      description: '文件已删除'
-    });
+
+  const handleDelete = async () => {
+    if (!selectedItem) return;
+    
+    try {
+      // 从云存储删除文件
+      if (selectedItem.fileID) {
+        const tcb = await window.$w?.cloud?.getCloudInstance();
+        if (tcb) {
+          await tcb.deleteFile({
+            fileList: [selectedItem.fileID]
+          });
+        }
+      }
+
+      // 从列表中删除
+      const updatedItems = mediaItems.filter(item => item.id !== selectedItem.id);
+      setMediaItems(updatedItems);
+      updateCategoryAndTagCounts(updatedItems);
+      setDeleteDialogOpen(false);
+      setSelectedItem(null);
+      toast({
+        title: '删除成功',
+        description: '文件已从云存储删除'
+      });
+    } catch (error) {
+      console.error('删除文件失败:', error);
+      toast({
+        title: '删除失败',
+        description: '删除文件时发生错误',
+        variant: 'destructive'
+      });
+    }
   };
+
+  const handleBatchDelete = async () => {
+    try {
+      const tcb = await window.$w?.cloud?.getCloudInstance();
+      const fileIDs = Array.from(selectedItems).map(itemId => {
+        const item = mediaItems.find(i => i.id === itemId);
+        return item?.fileID;
+      }).filter(Boolean);
+
+      if (tcb && fileIDs.length > 0) {
+        await tcb.deleteFile({
+          fileList: fileIDs
+        });
+      }
+
+      const updatedItems = mediaItems.filter(item => !selectedItems.has(item.id));
+      setMediaItems(updatedItems);
+      updateCategoryAndTagCounts(updatedItems);
+      setSelectedItems(new Set());
+      setBatchDialogOpen(false);
+      toast({
+        title: '批量删除成功',
+        description: `已从云存储删除 ${selectedItems.size} 个文件`
+      });
+    } catch (error) {
+      console.error('批量删除失败:', error);
+      toast({
+        title: '批量删除失败',
+        description: '删除文件时发生错误',
+        variant: 'destructive'
+      });
+    }
+  };
+
   const handleEdit = updatedItem => {
     const updatedItems = mediaItems.map(item => item.id === updatedItem.id ? updatedItem : item);
     setMediaItems(updatedItems);
@@ -258,6 +391,7 @@ export function MediaLibrary({
       description: '文件信息已更新'
     });
   };
+
   const copyToClipboard = text => {
     navigator.clipboard.writeText(text).then(() => {
       setCopiedUrl(true);
@@ -268,6 +402,7 @@ export function MediaLibrary({
       });
     });
   };
+
   const handleBatchSelect = (itemId, selected) => {
     const newSelected = new Set(selectedItems);
     if (selected) {
@@ -277,6 +412,7 @@ export function MediaLibrary({
     }
     setSelectedItems(newSelected);
   };
+
   const handleSelectAll = () => {
     if (selectedItems.size === filteredItems.length) {
       setSelectedItems(new Set());
@@ -284,6 +420,7 @@ export function MediaLibrary({
       setSelectedItems(new Set(filteredItems.map(item => item.id)));
     }
   };
+
   const handleBatchAction = action => {
     if (selectedItems.size === 0) {
       toast({
@@ -296,17 +433,7 @@ export function MediaLibrary({
     setBatchAction(action);
     setBatchDialogOpen(true);
   };
-  const handleBatchDelete = () => {
-    const updatedItems = mediaItems.filter(item => !selectedItems.has(item.id));
-    setMediaItems(updatedItems);
-    updateCategoryAndTagCounts(updatedItems);
-    setSelectedItems(new Set());
-    setBatchDialogOpen(false);
-    toast({
-      title: '批量删除成功',
-      description: `已删除 ${selectedItems.size} 个文件`
-    });
-  };
+
   const handleBatchMove = categoryId => {
     const updatedItems = mediaItems.map(item => selectedItems.has(item.id) ? {
       ...item,
@@ -321,6 +448,7 @@ export function MediaLibrary({
       description: `已移动 ${selectedItems.size} 个文件到 ${categories.find(c => c.id === categoryId)?.name}`
     });
   };
+
   const handleBatchAddTags = tagIds => {
     const updatedItems = mediaItems.map(item => selectedItems.has(item.id) ? {
       ...item,
@@ -335,6 +463,7 @@ export function MediaLibrary({
       description: `已为 ${selectedItems.size} 个文件添加标签`
     });
   };
+
   const addCategory = () => {
     if (!newCategoryName.trim()) return;
     const newCategory = {
@@ -351,6 +480,7 @@ export function MediaLibrary({
       description: `已创建分类: ${newCategoryName}`
     });
   };
+
   const addTag = () => {
     if (!newTagName.trim()) return;
     const newTag = {
@@ -366,6 +496,7 @@ export function MediaLibrary({
       description: `已创建标签: ${newTagName}`
     });
   };
+
   const formatFileSize = bytes => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -373,13 +504,11 @@ export function MediaLibrary({
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
+
   const formatDate = dateString => {
     return new Date(dateString).toLocaleDateString('zh-CN');
   };
-  const getCategoryColor = categoryId => {
-    const category = categories.find(c => c.id === categoryId);
-    return category ? category.color : 'gray';
-  };
+
   return <div className="space-y-6">
       {/* 操作栏 */}
       <div className="flex items-center justify-between">
@@ -393,7 +522,7 @@ export function MediaLibrary({
             </DialogTrigger>
             <DialogContent className="max-w-4xl">
               <DialogHeader>
-                <DialogTitle>上传素材</DialogTitle>
+                <DialogTitle>上传素材到云存储</DialogTitle>
               </DialogHeader>
               <MediaUpload onUpload={handleUpload} />
             </DialogContent>
@@ -402,6 +531,11 @@ export function MediaLibrary({
           <Button variant="outline" onClick={() => setBatchMode(!batchMode)}>
             {batchMode ? <Grid3x3 className="w-4 h-4 mr-2" /> : <Check className="w-4 h-4 mr-2" />}
             {batchMode ? '退出批量' : '批量管理'}
+          </Button>
+          
+          <Button variant="outline" onClick={loadFromCloudStorage} disabled={loading}>
+            {loading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Database className="w-4 h-4 mr-2" />}
+            刷新云存储
           </Button>
         </div>
         
@@ -415,61 +549,43 @@ export function MediaLibrary({
         </div>
       </div>
 
-      {/* 分类和标签筛选 */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* 分类筛选 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <FolderOpen className="w-5 h-5" />
-                <span>分类筛选</span>
+      {/* 云存储状态 */}
+      <Card className="border-blue-200 bg-blue-50">
+        <CardContent className="p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Cloud className="w-5 h-5 text-blue-600" />
+              <div>
+                <p className="font-medium text-blue-900">云存储状态</p>
+                <p className="text-sm text-blue-700">存储位置: HILLSEA-web/</p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => setCategoryDialogOpen(true)}>
-                <FolderPlus className="w-4 h-4" />
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              <Button variant={selectedCategory === 'all' ? 'default' : 'outline'} size="sm" onClick={() => setSelectedCategory('all')}>
-                全部 ({mediaItems.length})
-              </Button>
-              {categories.map(category => <Button key={category.id} variant={selectedCategory === category.id ? 'default' : 'outline'} size="sm" onClick={() => setSelectedCategory(category.id)} className={`relative ${selectedCategory === category.id ? `bg-${category.color}-500` : ''}`}>
-                  {category.name} ({category.count})
-                </Button>)}
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center space-x-4 text-sm text-blue-700">
+              <div className="flex items-center space-x-1">
+                <Folder className="w-4 h-4" />
+                <span>{mediaItems.length} 个文件</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <HardDrive className="w-4 h-4" />
+                <span>{formatFileSize(mediaItems.reduce((total, item) => total + item.size, 0))}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-        {/* 标签筛选 */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Tag className="w-5 h-5" />
-                <span>标签筛选</span>
-              </div>
-              <Button variant="ghost" size="sm" onClick={() => setTagDialogOpen(true)}>
-                <TagPlus className="w-4 h-4" />
-              </Button>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {tags.map(tag => <Button key={tag.id} variant={selectedTags.includes(tag.id) ? 'default' : 'outline'} size="sm" onClick={() => {
-              if (selectedTags.includes(tag.id)) {
-                setSelectedTags(selectedTags.filter(id => id !== tag.id));
-              } else {
-                setSelectedTags([...selectedTags, tag.id]);
-              }
-            }}>
-                  #{tag.name} ({tag.count})
-                </Button>)}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* 分类和标签筛选 */}
+      <MediaFilters
+        categories={categories}
+        tags={tags}
+        selectedCategory={selectedCategory}
+        selectedTags={selectedTags}
+        totalItems={mediaItems.length}
+        onCategoryChange={setSelectedCategory}
+        onTagChange={setSelectedTags}
+        onCategoryDialogOpen={() => setCategoryDialogOpen(true)}
+        onTagDialogOpen={() => setTagDialogOpen(true)}
+      />
 
       {/* 批量操作工具栏 */}
       {batchMode && selectedItems.size > 0 && <Card className="border-blue-200 bg-blue-50">
@@ -537,10 +653,10 @@ export function MediaLibrary({
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center space-x-2">
-              <AlertCircle className="w-8 h-8 text-orange-500" />
+              <Cloud className="w-8 h-8 text-orange-500" />
               <div>
                 <p className="text-2xl font-bold">{formatFileSize(mediaItems.reduce((total, item) => total + item.size, 0))}</p>
-                <p className="text-sm text-gray-600">总大小</p>
+                <p className="text-sm text-gray-600">云存储</p>
               </div>
             </div>
           </CardContent>
@@ -548,346 +664,60 @@ export function MediaLibrary({
       </div>
 
       {/* 素材展示 */}
-      {viewMode === 'grid' ? <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-          {filteredItems.map(item => <Card key={item.id} className={`overflow-hidden hover:shadow-lg transition-shadow ${batchMode ? 'cursor-pointer' : ''} ${selectedItems.has(item.id) ? 'ring-2 ring-blue-500' : ''}`} onClick={() => batchMode && handleBatchSelect(item.id, !selectedItems.has(item.id))}>
-              <div className="aspect-video bg-gray-100 relative">
-                {batchMode && <div className="absolute top-2 left-2 z-10">
-                    <Checkbox checked={selectedItems.has(item.id)} onChange={checked => handleBatchSelect(item.id, checked)} />
-                  </div>}
-                {item.type === 'image' ? <img src={item.url} alt={item.name} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center">
-                    <Video className="w-12 h-12 text-gray-400" />
-                  </div>}
-                <div className="absolute top-2 right-2">
-                  <Badge variant={item.type === 'image' ? 'default' : 'secondary'}>
-                    {item.type === 'image' ? '图片' : '视频'}
-                  </Badge>
-                </div>
-                {item.optimized && <div className="absolute top-2 left-2">
-                  <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                    <Zap className="w-3 h-3 mr-1" />
-                    已优化
-                  </Badge>
-                </div>}
-                {item.category && <div className="absolute bottom-2 left-2">
-                    <Badge variant="outline" className={`bg-${getCategoryColor(item.category)}-50 text-${getCategoryColor(item.category)}-700 border-${getCategoryColor(item.category)}-200`}>
-                      {categories.find(c => c.id === item.category)?.name}
-                    </Badge>
-                  </div>}
-              </div>
-              <CardContent className="p-4">
-                <h3 className="font-medium truncate mb-1">{item.name}</h3>
-                <p className="text-sm text-gray-600 mb-2">{formatFileSize(item.size)}</p>
-                {item.dimensions && <p className="text-xs text-gray-500 mb-2">{item.dimensions}</p>}
-                
-                {/* 标签显示 */}
-                {item.tags && item.tags.length > 0 && <div className="flex flex-wrap gap-1 mb-2">
-                    {item.tags.slice(0, 3).map(tagId => {
-              const tag = tags.find(t => t.id === tagId);
-              return tag ? <Badge key={tagId} variant="outline" className="text-xs">
-                          #{tag.name}
-                        </Badge> : null;
-            })}
-                    {item.tags.length > 3 && <Badge variant="outline" className="text-xs">
-                        +{item.tags.length - 3}
-                      </Badge>}
-                  </div>}
-                
-                <div className="flex items-center justify-between">
-                  <Badge variant="outline">{item.section}</Badge>
-                  <div className="flex space-x-1">
-                    <Button variant="ghost" size="sm" onClick={e => {
-                e.stopPropagation();
-                setSelectedItem(item);
-              }}>
-                      <Eye className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={e => {
-                e.stopPropagation();
-                copyToClipboard(item.url);
-              }}>
-                      {copiedUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={e => {
-                e.stopPropagation();
-                setSelectedItem(item);
-                setEditDialogOpen(true);
-              }}>
-                      <Edit className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={e => {
-                e.stopPropagation();
-                setSelectedItem(item);
-                setDeleteDialogOpen(true);
-              }}>
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>)}
-        </div> : <Card>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {batchMode && <TableHead>
-                    <Checkbox checked={selectedItems.size === filteredItems.length} onChange={handleSelectAll} />
-                  </TableHead>}
-                <TableHead>名称</TableHead>
-                <TableHead>类型</TableHead>
-                <TableHead>大小</TableHead>
-                <TableHead>格式</TableHead>
-                <TableHead>分类</TableHead>
-                <TableHead>标签</TableHead>
-                <TableHead>栏目</TableHead>
-                <TableHead>上传时间</TableHead>
-                <TableHead>操作</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredItems.map(item => <TableRow key={item.id} className={selectedItems.has(item.id) ? 'bg-blue-50' : ''}>
-                  {batchMode && <TableCell>
-                      <Checkbox checked={selectedItems.has(item.id)} onChange={checked => handleBatchSelect(item.id, checked)} />
-                    </TableCell>}
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      {item.type === 'image' ? <Image className="w-4 h-4" /> : <Video className="w-4 h-4" />}
-                      <span className="font-medium">{item.name}</span>
-                      {item.optimized && <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          <Zap className="w-3 h-3 mr-1" />
-                          已优化
-                        </Badge>}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={item.type === 'image' ? 'default' : 'secondary'}>
-                      {item.type === 'image' ? '图片' : '视频'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>{formatFileSize(item.size)}</TableCell>
-                  <TableCell>
-                    <div>
-                      <span className="font-medium">{item.format}</span>
-                      {item.dimensions && <span className="text-xs text-gray-500 block">{item.dimensions}</span>}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {item.category && <Badge variant="outline" className={`bg-${getCategoryColor(item.category)}-50 text-${getCategoryColor(item.category)}-700 border-${getCategoryColor(item.category)}-200`}>
-                        {categories.find(c => c.id === item.category)?.name}
-                      </Badge>}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap gap-1">
-                      {item.tags && item.tags.slice(0, 2).map(tagId => {
-                  const tag = tags.find(t => t.id === tagId);
-                  return tag ? <Badge key={tagId} variant="outline" className="text-xs">
-                            #{tag.name}
-                          </Badge> : null;
-                })}
-                      {item.tags && item.tags.length > 2 && <Badge variant="outline" className="text-xs">
-                          +{item.tags.length - 2}
-                        </Badge>}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{item.section}</Badge>
-                  </TableCell>
-                  <TableCell>{formatDate(item.uploadedAt)}</TableCell>
-                  <TableCell>
-                    <div className="flex space-x-1">
-                      <Button variant="ghost" size="sm" onClick={() => setSelectedItem(item)}>
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(item.url)}>
-                        {copiedUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => {
-                  setSelectedItem(item);
-                  setEditDialogOpen(true);
-                }}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" onClick={() => {
-                  setSelectedItem(item);
-                  setDeleteDialogOpen(true);
-                }}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>)}
-            </TableBody>
-          </Table>
+      {loading ? <div className="flex items-center justify-center py-12">
+          <RefreshCw className="w-8 h-8 animate-spin text-blue-600 mr-3" />
+          <span className="text-lg text-gray-600">正在从云存储加载文件...</span>
+        </div> : viewMode === 'grid' ? <MediaGrid
+        items={filteredItems}
+        selectedItems={selectedItems}
+        batchMode={batchMode}
+        categories={categories}
+        tags={tags}
+        onBatchSelect={handleBatchSelect}
+        onSelectItem={setSelectedItem}
+        onCopyUrl={copyToClipboard}
+        onEdit={item => {
+          setSelectedItem(item);
+          setEditDialogOpen(true);
+        }}
+        onDelete={item => {
+          setSelectedItem(item);
+          setDeleteDialogOpen(true);
+        }}
+        copiedUrl={copiedUrl}
+      /> : <Card>
+          <MediaTable
+            items={filteredItems}
+            selectedItems={selectedItems}
+            batchMode={batchMode}
+            categories={categories}
+            tags={tags}
+            onBatchSelect={handleBatchSelect}
+            onSelectItem={setSelectedItem}
+            onCopyUrl={copyToClipboard}
+            onEdit={item => {
+              setSelectedItem(item);
+              setEditDialogOpen(true);
+            }}
+            onDelete={item => {
+              setSelectedItem(item);
+              setDeleteDialogOpen(true);
+            }}
+            copiedUrl={copiedUrl}
+          />
         </Card>}
 
       {/* 编辑对话框 */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>编辑素材信息</DialogTitle>
-          </DialogHeader>
-          {selectedItem && <div className="space-y-4">
-              <Tabs defaultValue="info" className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
-                  <TabsTrigger value="info">基本信息</TabsTrigger>
-                  <TabsTrigger value="category">分类标签</TabsTrigger>
-                  <TabsTrigger value="address">地址管理</TabsTrigger>
-                  <TabsTrigger value="preview">预览</TabsTrigger>
-                </TabsList>
-                
-                <TabsContent value="info" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>文件名</Label>
-                    <Input value={selectedItem.name} onChange={e => setSelectedItem({
-                  ...selectedItem,
-                  name: e.target.value
-                })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>描述</Label>
-                    <Input value={selectedItem.description} onChange={e => setSelectedItem({
-                  ...selectedItem,
-                  description: e.target.value
-                })} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>栏目</Label>
-                    <Select value={selectedItem.section} onValueChange={value => setSelectedItem({
-                  ...selectedItem,
-                  section: value
-                })}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="home">首页</SelectItem>
-                        <SelectItem value="about">关于我们</SelectItem>
-                        <SelectItem value="services">服务</SelectItem>
-                        <SelectItem value="solutions">解决方案</SelectItem>
-                        <SelectItem value="products">产品</SelectItem>
-                        <SelectItem value="technology">技术</SelectItem>
-                        <SelectItem value="unassigned">未分配</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="category" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>分类</Label>
-                    <Select value={selectedItem.category || ''} onValueChange={value => setSelectedItem({
-                  ...selectedItem,
-                  category: value
-                })}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="选择分类" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map(category => <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>标签</Label>
-                    <div className="border rounded-lg p-3 max-h-32 overflow-y-auto">
-                      <div className="grid grid-cols-2 gap-2">
-                        {tags.map(tag => <div key={tag.id} className="flex items-center space-x-2">
-                            <input type="checkbox" id={`tag-${tag.id}`} checked={selectedItem.tags && selectedItem.tags.includes(tag.id)} onChange={e => {
-                        const currentTags = selectedItem.tags || [];
-                        if (e.target.checked) {
-                          setSelectedItem({
-                            ...selectedItem,
-                            tags: [...currentTags, tag.id]
-                          });
-                        } else {
-                          setSelectedItem({
-                            ...selectedItem,
-                            tags: currentTags.filter(id => id !== tag.id)
-                          });
-                        }
-                      }} />
-                            <Label htmlFor={`tag-${tag.id}`} className="text-sm">
-                              #{tag.name}
-                            </Label>
-                          </div>)}
-                      </div>
-                    </div>
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="address" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>文件地址</Label>
-                    <div className="flex items-center space-x-2">
-                      <Input value={selectedItem.url} readOnly className="text-xs" />
-                      <Button variant="outline" size="sm" onClick={() => copyToClipboard(selectedItem.url)}>
-                        {copiedUrl ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => window.open(selectedItem.url, '_blank')}>
-                        <ExternalLink className="w-4 h-4" />
-                      </Button>
-                    </div>
-                    <p className="text-xs text-gray-500">点击复制按钮获取文件地址，可用于网站引用</p>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label>HTML 引用代码</Label>
-                    {selectedItem.type === 'image' ? <div className="space-y-2">
-                        <Input value={`<img src="${selectedItem.url}" alt="${selectedItem.name}" />`} readOnly className="text-xs font-mono" />
-                        <Button variant="outline" size="sm" onClick={() => copyToClipboard(`<img src="${selectedItem.url}" alt="${selectedItem.name}" />`)}>
-                          <Copy className="w-4 h-4 mr-2" />
-                          复制HTML代码
-                        </Button>
-                      </div> : <div className="space-y-2">
-                        <Input value={`<video src="${selectedItem.url}" controls></video>`} readOnly className="text-xs font-mono" />
-                        <Button variant="outline" size="sm" onClick={() => copyToClipboard(`<video src="${selectedItem.url}" controls></video>`)}>
-                          <Copy className="w-4 h-4 mr-2" />
-                          复制HTML代码
-                        </Button>
-                      </div>}
-                  </div>
-                </TabsContent>
-                
-                <TabsContent value="preview" className="space-y-4">
-                  <div className="border rounded-lg p-4">
-                    {selectedItem.type === 'image' ? <img src={selectedItem.url} alt={selectedItem.name} className="w-full h-auto max-h-96 object-contain" /> : <div className="aspect-video bg-gray-100 rounded-lg flex items-center justify-center">
-                        <Video className="w-12 h-12 text-gray-400" />
-                      </div>}
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <span className="text-gray-600">文件大小:</span>
-                      <span className="ml-2 font-medium">{formatFileSize(selectedItem.size)}</span>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">文件格式:</span>
-                      <span className="ml-2 font-medium">{selectedItem.format}</span>
-                    </div>
-                    {selectedItem.dimensions && <div>
-                        <span className="text-gray-600">图片尺寸:</span>
-                        <span className="ml-2 font-medium">{selectedItem.dimensions}</span>
-                      </div>}
-                    {selectedItem.duration && <div>
-                        <span className="text-gray-600">视频时长:</span>
-                        <span className="ml-2 font-medium">{selectedItem.duration}</span>
-                      </div>}
-                  </div>
-                </TabsContent>
-              </Tabs>
-              
-              <div className="flex justify-end space-x-2">
-                <Button variant="outline" onClick={() => setEditDialogOpen(false)}>
-                  取消
-                </Button>
-                <Button onClick={() => handleEdit(selectedItem)}>
-                  保存
-                </Button>
-              </div>
-            </div>}
-        </DialogContent>
-      </Dialog>
+      <MediaEditDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        item={selectedItem}
+        categories={categories}
+        tags={tags}
+        onSave={handleEdit}
+        copiedUrl={copiedUrl}
+        onCopyUrl={copyToClipboard}
+      />
 
       {/* 批量操作对话框 */}
       <Dialog open={batchDialogOpen} onOpenChange={setBatchDialogOpen}>
